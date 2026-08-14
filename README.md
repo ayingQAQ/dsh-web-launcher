@@ -42,19 +42,6 @@ dsh-web-launcher setup
 
 `npx dsh-web-launcher start` 可用于临时启动。需要长期使用桌面图标时，请全局安装后执行 `setup`。
 
-## 从源码开发
-
-需要 Windows 和 Node.js 20 或更高版本：
-
-```powershell
-npm install
-npm run check
-npm test
-node bin/dsh-web-launcher.js setup
-```
-
-图标源文件和派生格式位于 `assets/`；重新生成 ICO 文件可运行 `npm run build:icon`。
-
 ## 限制
 
 当前版本仅支持 Windows、默认 web profile 和默认端口 3080，不提供端口配置。

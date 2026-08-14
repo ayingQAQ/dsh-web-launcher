@@ -10,16 +10,10 @@
     "bin",
     "src",
     "assets",
-    "scripts",
     "README.md",
     "LICENSE",
     "THIRD_PARTY_NOTICES.md"
   ],
-  "scripts": {
-    "build:icon": "node scripts/png-to-ico.mjs assets/deepseek-black.png assets/deepseek-black.ico",
-    "test": "node --test",
-    "check": "node --check src/index.js && node --check src/core.js && node --check bin/dsh-web-launcher.js"
-  },
   "engines": {
     "node": ">=20"
   },
