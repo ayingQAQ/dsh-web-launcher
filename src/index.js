@@ -182,7 +182,7 @@ async function stopRunningDsh() {
   throw new Error('当前 DSH 在 10 秒内未停止。请关闭后重试。')
 }
 
-async function start() {
+export async function start() {
   ensureWindows()
   await mkdir(logDir, { recursive: true })
 
@@ -256,11 +256,15 @@ function desktopPath() {
   return expandEnvironmentVariables(match[1])
 }
 
+function shortcutPath() {
+  return join(desktopPath(), 'DSH Web.lnk')
+}
+
 function createShortcut() {
   const shortcut = require('windows-shortcut-napi')
-  const shortcutPath = join(desktopPath(), 'DSH Web.lnk')
+  const path = shortcutPath()
   const wscriptPath = join(process.env.WINDIR || 'C:\\Windows', 'System32', 'wscript.exe')
-  shortcut.create(shortcutPath, {
+  shortcut.create(path, {
     target: wscriptPath,
     args: `//B //Nologo "${runnerPath}"`,
     workingDir: appDir,
@@ -269,7 +273,7 @@ function createShortcut() {
     iconIndex: 0,
     desc: '启动 DeepSeek Harness Web',
   })
-  return shortcutPath
+  return path
 }
 
 async function copyIfDifferent(source, destination) {
@@ -288,7 +292,20 @@ async function installStableRuntime() {
   ])
 }
 
-async function setup() {
+export async function desktopStatus() {
+  ensureWindows()
+  let version = null
+  try {
+    version = JSON.parse(await readFile(join(runtimeDir, 'package.json'), 'utf8')).version ?? null
+  } catch { /* runtime is not installed yet */ }
+  return {
+    shortcut: existsSync(shortcutPath()),
+    runtime: existsSync(installedEntryPath) && existsSync(installedIconPath),
+    version,
+  }
+}
+
+export async function setup({ quiet = false } = {}) {
   ensureWindows()
   await mkdir(appDir, { recursive: true })
   if (!existsSync(sourceIconPath)) throw new Error(`缺少图标资源：${sourceIconPath}`)
@@ -300,24 +317,41 @@ async function setup() {
     rm(obsoleteShortcutCreatorPath, { force: true }),
     rm(obsoleteDesktopPathRunnerPath, { force: true }),
   ])
-  process.stdout.write(`已创建桌面快捷方式：${shortcutPath}\n`)
+  if (!quiet) process.stdout.write(`已创建桌面快捷方式：${shortcutPath}\n`)
+  return desktopStatus()
+}
+
+export async function removeDesktopSetup() {
+  ensureWindows()
+  await Promise.all([
+    rm(shortcutPath(), { force: true }),
+    rm(runtimeDir, { recursive: true, force: true }),
+    rm(runnerPath, { force: true }),
+    rm(refreshRunnerPath, { force: true }),
+    rm(errorRunnerPath, { force: true }),
+    rm(obsoleteShortcutCreatorPath, { force: true }),
+    rm(obsoleteDesktopPathRunnerPath, { force: true }),
+    rm(lockPath, { force: true }),
+  ])
+  return desktopStatus()
 }
 
 function printHelp() {
-  process.stdout.write(`${packageInfo.name} ${packageInfo.version}\n\n用法:\n  dsh-web-launcher start\n  dsh-web-launcher setup\n`)
+  process.stdout.write(`${packageInfo.name} ${packageInfo.version}\n\n用法:\n  dsh-web-launcher start\n  dsh-web-launcher setup\n  dsh-web-launcher remove\n`)
 }
 
-async function main() {
+export async function runCli() {
   const command = process.argv[2] || 'start'
   if (command === 'start') await start()
   else if (command === 'setup') await setup()
+  else if (command === 'remove') await removeDesktopSetup()
   else if (command === '--help' || command === '-h') printHelp()
   else throw new Error(`未知命令：${command}`)
 }
 
-main().catch((error) => {
+export function reportCliError(error) {
   const message = error instanceof Error ? error.message : String(error)
   showError('DSH Web 启动失败', message)
   process.stderr.write(`dsh-web-launcher: ${message}\n`)
   process.exitCode = 1
-})
+}

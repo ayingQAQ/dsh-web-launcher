@@ -1,0 +1,4 @@
+# Adds the launcher host and its browser settings row to the active profile.
+- insert:
+    - id: dsh-web-launcher
+      name: dsh-web-launcher

@@ -1,15 +1,24 @@
 {
   "name": "dsh-web-launcher",
-  "version": "0.1.0",
-  "description": "A Windows desktop launcher for DeepSeek Harness Web.",
+  "version": "0.2.0",
+  "description": "由 DSH 管理的 Windows 一键启动器｜Desktop launcher bundle for DeepSeek Harness Web.",
   "type": "module",
+  "main": "./src/plugin.js",
+  "exports": {
+    ".": "./src/plugin.js",
+    "./client": "./client/client.js",
+    "./cordis.patch.yml": "./cordis.patch.yml",
+    "./package.json": "./package.json"
+  },
   "bin": {
     "dsh-web-launcher": "bin/dsh-web-launcher.js"
   },
   "files": [
     "bin",
     "src",
+    "client",
     "assets",
+    "cordis.patch.yml",
     "README.md",
     "LICENSE",
     "THIRD_PARTY_NOTICES.md"
@@ -36,6 +45,21 @@
     "url": "https://github.com/ayingQAQ/dsh-web-launcher/issues"
   },
   "license": "MIT",
+  "dsh": {
+    "bundle": {
+      "patch": "./cordis.patch.yml"
+    },
+    "client": {
+      "inject": [
+        "@deepseek-ai/dsh-client-locale",
+        "@deepseek-ai/dsh-client-ui-settings"
+      ],
+      "platform": "web"
+    }
+  },
+  "peerDependencies": {
+    "@deepseek-ai/cordis": "^4.0.1"
+  },
   "dependencies": {
     "windows-shortcut-napi": "1.0.2"
   }

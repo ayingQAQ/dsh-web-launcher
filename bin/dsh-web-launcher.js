@@ -1,2 +1,4 @@
 #!/usr/bin/env node
-import '../src/index.js'
+import { reportCliError, runCli } from '../src/index.js'
+
+runCli().catch(reportCliError)
