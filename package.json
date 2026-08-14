@@ -1,0 +1,48 @@
+{
+  "name": "dsh-web-launcher",
+  "version": "0.1.0",
+  "description": "A Windows desktop launcher for DeepSeek Harness Web.",
+  "type": "module",
+  "bin": {
+    "dsh-web-launcher": "bin/dsh-web-launcher.js"
+  },
+  "files": [
+    "bin",
+    "src",
+    "assets",
+    "scripts",
+    "README.md",
+    "LICENSE",
+    "THIRD_PARTY_NOTICES.md"
+  ],
+  "scripts": {
+    "build:icon": "node scripts/png-to-ico.mjs assets/deepseek-black.png assets/deepseek-black.ico",
+    "test": "node --test",
+    "check": "node --check src/index.js && node --check src/core.js && node --check bin/dsh-web-launcher.js"
+  },
+  "engines": {
+    "node": ">=20"
+  },
+  "os": [
+    "win32"
+  ],
+  "keywords": [
+    "deepseek",
+    "dsh",
+    "deepseek-harness",
+    "launcher",
+    "windows"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/ayingQAQ/dsh-web-launcher.git"
+  },
+  "homepage": "https://github.com/ayingQAQ/dsh-web-launcher#readme",
+  "bugs": {
+    "url": "https://github.com/ayingQAQ/dsh-web-launcher/issues"
+  },
+  "license": "MIT",
+  "dependencies": {
+    "windows-shortcut-napi": "1.0.2"
+  }
+}
