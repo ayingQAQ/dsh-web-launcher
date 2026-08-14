@@ -34,7 +34,7 @@ const errorRunnerPath = join(appDir, 'show-error.vbs')
 const obsoleteShortcutCreatorPath = join(appDir, 'create-shortcut.vbs')
 const obsoleteDesktopPathRunnerPath = join(appDir, 'desktop-path.vbs')
 const runtimeDir = join(appDir, 'runtime')
-const installedEntryPath = join(runtimeDir, 'src', 'index.js')
+const installedEntryPath = join(runtimeDir, 'bin', 'dsh-web-launcher.js')
 const installedIconPath = join(runtimeDir, 'assets', 'deepseek-black.ico')
 const sourceIconPath = resolve(packageRoot, 'assets', 'deepseek-black.ico')
 const previousLogPath = join(logDir, 'previous.log')
@@ -282,10 +282,12 @@ async function copyIfDifferent(source, destination) {
 }
 
 async function installStableRuntime() {
+  await mkdir(join(runtimeDir, 'bin'), { recursive: true })
   await mkdir(join(runtimeDir, 'src'), { recursive: true })
   await mkdir(join(runtimeDir, 'assets'), { recursive: true })
   await Promise.all([
-    copyIfDifferent(entryPath, installedEntryPath),
+    copyIfDifferent(resolve(packageRoot, 'bin', 'dsh-web-launcher.js'), installedEntryPath),
+    copyIfDifferent(entryPath, join(runtimeDir, 'src', 'index.js')),
     copyIfDifferent(resolve(packageRoot, 'src', 'core.js'), join(runtimeDir, 'src', 'core.js')),
     copyIfDifferent(packagePath, join(runtimeDir, 'package.json')),
     copyIfDifferent(sourceIconPath, installedIconPath),
