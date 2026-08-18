@@ -34,7 +34,13 @@ window.__ModuleLoader__.load({ id: 'dsh-web-launcher', factory: (require) => {
       headers: method === 'POST' ? { 'content-type': 'application/json' } : undefined,
       body: method === 'POST' ? '{}' : undefined,
     })
-    const payload = await response.json()
+    const text = await response.text()
+    let payload = null
+    try {
+      payload = JSON.parse(text)
+    } catch {
+      throw new Error(response.ok ? '服务返回了无效响应' : `HTTP ${response.status}`)
+    }
     if (!response.ok || payload.ok !== true) throw new Error(payload.error || `HTTP ${response.status}`)
     return payload.status
   }
@@ -43,12 +49,18 @@ window.__ModuleLoader__.load({ id: 'dsh-web-launcher', factory: (require) => {
     const [status, setStatus] = React.useState(null)
     const [busy, setBusy] = React.useState(false)
     const [error, setError] = React.useState(null)
+    const busyRef = React.useRef(false)
+    const requestId = React.useRef(0)
 
     const load = React.useCallback(async () => {
+      const currentRequest = ++requestId.current
       try {
-        setStatus(await request('/dsh-web-launcher/status'))
+        const nextStatus = await request('/dsh-web-launcher/status')
+        if (currentRequest !== requestId.current) return
+        setStatus(nextStatus)
         setError(null)
       } catch (reason) {
+        if (currentRequest !== requestId.current) return
         setError(reason instanceof Error ? reason.message : String(reason))
       }
     }, [])
@@ -56,17 +68,23 @@ window.__ModuleLoader__.load({ id: 'dsh-web-launcher', factory: (require) => {
     React.useEffect(() => { load() }, [load])
 
     const act = React.useCallback(async (path) => {
-      if (busy) return
+      if (busyRef.current) return
+      busyRef.current = true
+      const currentRequest = ++requestId.current
       setBusy(true)
       setError(null)
       try {
-        setStatus(await request(path, 'POST'))
+        const nextStatus = await request(path, 'POST')
+        if (currentRequest !== requestId.current) return
+        setStatus(nextStatus)
       } catch (reason) {
+        if (currentRequest !== requestId.current) return
         setError(reason instanceof Error ? reason.message : String(reason))
       } finally {
-        setBusy(false)
+        if (currentRequest === requestId.current) setBusy(false)
+        busyRef.current = false
       }
-    }, [busy])
+    }, [])
 
     const installed = status?.shortcut === true && status?.runtime === true
     const button = {
