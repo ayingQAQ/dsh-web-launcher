@@ -36,6 +36,7 @@ dsh-web-launcher setup
 ```powershell
 dsh-web-launcher start
 dsh-web-launcher setup
+dsh-web-launcher status
 dsh-web-launcher remove
 ```
 

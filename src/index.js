@@ -365,13 +365,14 @@ export async function removeDesktopSetup() {
 }
 
 function printHelp() {
-  process.stdout.write(`${packageInfo.name} ${packageInfo.version}\n\n用法:\n  dsh-web-launcher start\n  dsh-web-launcher setup\n  dsh-web-launcher remove\n`)
+  process.stdout.write(`${packageInfo.name} ${packageInfo.version}\n\n用法:\n  dsh-web-launcher start\n  dsh-web-launcher setup\n  dsh-web-launcher status\n  dsh-web-launcher remove\n`)
 }
 
 export async function runCli() {
   const command = process.argv[2] || 'start'
   if (command === 'start') await start()
   else if (command === 'setup') await setup()
+  else if (command === 'status') process.stdout.write(`${JSON.stringify(await desktopStatus())}\n`)
   else if (command === 'remove') await removeDesktopSetup()
   else if (command === '--help' || command === '-h') printHelp()
   else throw new Error(`未知命令：${command}`)
