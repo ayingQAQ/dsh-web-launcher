@@ -262,13 +262,37 @@ function shortcutPath() {
   return join(desktopPath(), 'DSH Web.lnk')
 }
 
+function shortcutTargetPath() {
+  return join(process.env.WINDIR || 'C:\\Windows', 'System32', 'wscript.exe')
+}
+
+function shortcutArguments() {
+  return `//B //Nologo "${runnerPath}"`
+}
+
+function sameWindowsPath(left, right) {
+  return typeof left === 'string' && left.toLowerCase() === right.toLowerCase()
+}
+
+function shortcutIsCurrent() {
+  try {
+    const shortcut = require('windows-shortcut-napi')
+    const info = shortcut.query(shortcutPath())
+    return sameWindowsPath(info.target, shortcutTargetPath())
+      && info.args === shortcutArguments()
+      && sameWindowsPath(info.workingDir, appDir)
+      && sameWindowsPath(info.icon, installedIconPath)
+  } catch {
+    return false
+  }
+}
+
 function createShortcut() {
   const shortcut = require('windows-shortcut-napi')
   const path = shortcutPath()
-  const wscriptPath = join(process.env.WINDIR || 'C:\\Windows', 'System32', 'wscript.exe')
   shortcut.create(path, {
-    target: wscriptPath,
-    args: `//B //Nologo "${runnerPath}"`,
+    target: shortcutTargetPath(),
+    args: shortcutArguments(),
     workingDir: appDir,
     runStyle: shortcut.SW_SHOWMINNOACTIVE,
     icon: installedIconPath,
@@ -303,7 +327,7 @@ export async function desktopStatus() {
     version = JSON.parse(await readFile(join(runtimeDir, 'package.json'), 'utf8')).version ?? null
   } catch { /* runtime is not installed yet */ }
   return {
-    shortcut: existsSync(shortcutPath()),
+    shortcut: shortcutIsCurrent(),
     runtime: existsSync(installedEntryPath) && existsSync(installedIconPath),
     version,
   }
