@@ -89,21 +89,42 @@ export function listeningPidFromNetstat(output) {
 
 export function endpointProbe(url = DEFAULT_URL, timeoutMs = 800) {
   return new Promise((resolve) => {
+    let settled = false
+    let timer = null
+    const finish = (result) => {
+      if (settled) return
+      settled = true
+      if (timer !== null) clearTimeout(timer)
+      resolve(result)
+    }
     const req = request(url, { method: 'GET', timeout: timeoutMs }, (response) => {
       let body = ''
-      response.setEncoding('utf8')
-      response.on('data', (chunk) => { body = (body + chunk).slice(0, 64 * 1024) })
-      response.on('end', () => {
-        resolve({
-          kind: response.statusCode && response.statusCode >= 200 && response.statusCode < 400 && body.includes(DSH_MARKER)
-            ? 'dsh'
-            : 'other',
-          statusCode: response.statusCode ?? null,
-        })
+      const statusCode = response.statusCode ?? null
+      const classify = () => ({
+        kind: statusCode !== null && statusCode >= 200 && statusCode < 400 && body.includes(DSH_MARKER)
+          ? 'dsh'
+          : 'other',
+        statusCode,
       })
+      response.setEncoding('utf8')
+      response.on('data', (chunk) => {
+        body = (body + chunk).slice(0, 64 * 1024)
+        if (body.includes(DSH_MARKER) || body.length === 64 * 1024) {
+          response.destroy()
+          finish(classify())
+        }
+      })
+      response.on('end', () => finish(classify()))
+      response.on('error', () => finish({ kind: 'offline', statusCode: null }))
     })
+    // `request`'s timeout is an inactivity timeout. Keep an absolute deadline
+    // too, so a non-DSH service that streams forever cannot stall a launch.
+    timer = setTimeout(() => {
+      req.destroy()
+      finish({ kind: 'offline', statusCode: null })
+    }, timeoutMs)
     req.on('timeout', () => req.destroy())
-    req.on('error', () => resolve({ kind: 'offline', statusCode: null }))
+    req.on('error', () => finish({ kind: 'offline', statusCode: null }))
     req.end()
   })
 }
