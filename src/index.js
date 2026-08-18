@@ -37,8 +37,8 @@ const runtimeDir = join(appDir, 'runtime')
 const installedEntryPath = join(runtimeDir, 'bin', 'dsh-web-launcher.js')
 // Keep the icon filename versioned. Windows caches shortcut icons by path, so
 // replacing bytes at an existing path can leave the desktop showing an old icon.
-const installedIconPath = join(runtimeDir, 'assets', 'dsh-web-launcher-whale.ico')
-const sourceIconPath = resolve(packageRoot, 'assets', 'dsh-web-launcher-whale.ico')
+const installedIconPath = join(runtimeDir, 'assets', 'dsh-web-launcher-whale-rounded.ico')
+const sourceIconPath = resolve(packageRoot, 'assets', 'dsh-web-launcher-whale-rounded.ico')
 const previousLogPath = join(logDir, 'previous.log')
 const MAX_LOG_BYTES = 1024 * 1024
 

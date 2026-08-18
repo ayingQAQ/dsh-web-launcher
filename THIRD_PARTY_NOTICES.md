@@ -8,7 +8,7 @@ The files below are derived from the favicon distributed with
 - `assets/deepseek-black.svg`
 - `assets/deepseek-black.png`
 - `assets/deepseek-black.ico`
-- `assets/dsh-web-launcher-whale.ico`
+- `assets/dsh-web-launcher-whale-rounded.ico`
 
 Source project: [deepseek-ai/deepseek-harness](https://github.com/deepseek-ai/deepseek-harness),
 `apps/web/dist/favicon.svg` (distributed in the npm package under `dist/favicon.svg`).
