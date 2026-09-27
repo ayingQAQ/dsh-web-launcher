@@ -55,8 +55,9 @@ function ensureWindows() {
 function showError(title, message) {
   try {
     mkdirSync(appDir, { recursive: true })
-    if (!existsSync(errorRunnerPath)) writeFileSync(errorRunnerPath, makeErrorRunner(), 'utf8')
-    spawnSync('wscript.exe', ['//Nologo', errorRunnerPath, title, message], { windowsHide: true, stdio: 'ignore' })
+    // Replace an older, unbounded helper even when failure occurs before setup.
+    writeFileSync(errorRunnerPath, makeErrorRunner(), 'utf8')
+    spawnSync('wscript.exe', ['//Nologo', errorRunnerPath, title, message], { windowsHide: true, stdio: 'ignore', timeout: 20_000 })
   } catch { /* stderr below remains the final fallback */ }
 }
 

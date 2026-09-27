@@ -95,7 +95,7 @@ export function makeErrorRunner() {
   return [
     'Option Explicit',
     'If WScript.Arguments.Count <> 2 Then WScript.Quit 1',
-    'CreateObject("WScript.Shell").Popup WScript.Arguments(1), 0, WScript.Arguments(0), 16',
+    'CreateObject("WScript.Shell").Popup WScript.Arguments(1), 15, WScript.Arguments(0), 16',
   ].join('\r\n') + '\r\n'
 }
 

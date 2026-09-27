@@ -26,6 +26,22 @@ test('legacy HTML is still detected and unrelated HTML is not', async t => {
   assert.equal((await core.endpointProbe(`${url}/other`)).kind, 'other')
 })
 
+test('DSH auth text on a non-401 response is not proof of a running DSH', async t => {
+  const url = await serve(t, (req, res) => {
+    res.writeHead(Number(req.url.slice(1)))
+    res.end('dsh web authentication required; reopen the URL printed by dsh web.\n')
+  })
+  for (const status of [200, 403, 500]) assert.equal((await core.endpointProbe(`${url}/${status}`)).kind, 'other')
+})
+
+test('closed port is offline, not an occupied port', async () => {
+  const server = createServer()
+  await new Promise(resolve => server.listen(0, '127.0.0.1', resolve))
+  const url = `http://127.0.0.1:${server.address().port}`
+  await new Promise(resolve => server.close(resolve))
+  assert.equal((await core.endpointProbe(url)).kind, 'offline')
+})
+
 test('startup URL parser preserves the token and rejects foreign or incomplete announcements', () => {
   assert.equal(core.dshUrlFromOutput('dsh web: http://127.0.0.1:3080/?token=abc\n', core.DEFAULT_URL), 'http://127.0.0.1:3080/?token=abc')
   assert.equal(core.dshUrlFromOutput('dsh web: http://127.0.0.1:3080/?token=ab', core.DEFAULT_URL), null)

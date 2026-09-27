@@ -1,6 +1,6 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
-import { mkdtemp, mkdir, writeFile, readFile, rm } from 'node:fs/promises'
+import { mkdtemp, mkdir, writeFile, readFile, realpath, rm } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join, resolve } from 'node:path'
 import { pathToFileURL } from 'node:url'
@@ -44,7 +44,8 @@ test('isolated Windows cold start, authenticated restart, pinned command and sta
   for (const result of concurrent) assert.deepEqual(result, { status: 0, stderr: '' })
   const first = JSON.parse(await readFile(statePath, 'utf8'))
   currentPid = first.pid
-  assert.equal(first.command.toLowerCase(), shim.toLowerCase())
+  // where.exe expands Windows 8.3 paths (e.g. RUNNER~1 on GitHub runners).
+  assert.equal((await realpath(first.command)).toLowerCase(), (await realpath(shim)).toLowerCase())
   assert.match(first.launchUrl, /\?token=.+/)
   const firstUi = (await readFile(uiLog, 'utf8')).trim().split('\n').map(JSON.parse)
   assert.deepEqual(firstUi, [{ action: 'open', args: [first.launchUrl] }])

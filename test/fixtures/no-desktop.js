@@ -13,7 +13,7 @@ childProcess.spawn = (command, args, options) => {
 childProcess.spawnSync = (command, args, options) => {
   if (command === 'tasklist.exe') return { status: 0, stdout: '"msedge.exe","123","Console","1","0 K","Running","test","0:00:00","DeepSeek Harness"' }
   if (command === 'wscript.exe') {
-    appendFileSync(process.env.TEST_UI_LOG, JSON.stringify({ action: 'refresh', args }) + '\n')
+    appendFileSync(process.env.TEST_UI_LOG, JSON.stringify({ action: 'refresh', args, timeout: options?.timeout }) + '\n')
     return { status: 0 }
   }
   return spawnSync(command, args, options)
