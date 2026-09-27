@@ -1,8 +1,11 @@
 {
   "name": "dsh-web-launcher",
-  "version": "0.2.4",
+  "version": "0.2.5",
   "description": "由 DSH 管理的 Windows 一键启动器｜Desktop launcher bundle for DeepSeek Harness Web.",
   "type": "module",
+  "scripts": {
+    "test": "node --test test/compat.test.js test/start.test.js"
+  },
   "main": "./src/plugin.js",
   "exports": {
     ".": "./src/plugin.js",

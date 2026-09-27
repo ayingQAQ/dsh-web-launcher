@@ -15,10 +15,30 @@ function sameOrigin(request) {
   const host = request.headers.host
   if (origin === undefined || host === undefined) return false
   try {
-    return new URL(origin).host === host
+    const url = new URL(origin)
+    return ['http:', 'https:'].includes(url.protocol) && url.host === host
   } catch {
     return false
   }
+}
+
+function authorize(host, request, response) {
+  // Desktop management is local-only even when DSH itself binds to the LAN.
+  if (!['127.0.0.1', '::1', '::ffff:127.0.0.1'].includes(request.socket?.remoteAddress)) {
+    sendJson(response, 403, { ok: false, error: 'desktop management is local-only' })
+    return false
+  }
+  const connection = host.connection
+  if (typeof connection.admit === 'function') {
+    const admission = connection.admit(request)
+    if (admission && !('rejection' in admission) && admission.peer) return true
+    sendJson(response, admission?.rejection || 403, { ok: false, error: 'DSH authentication required' })
+    return false
+  }
+  // Old releases have no admission API; do not fall back to unauthenticated
+  // management on an unknown future Connection implementation.
+  sendJson(response, 503, { ok: false, error: '当前 DSH 不支持安全管理接口，请使用启动器 CLI 管理快捷方式' })
+  return false
 }
 
 function methodOnly(request, response, method) {
@@ -47,6 +67,7 @@ function mountRoutes(host) {
       path: '/dsh-web-launcher/status',
       handler: async (request, response) => {
         if (!methodOnly(request, response, 'GET')) return
+        if (!authorize(host, request, response)) return
         await handleAction(response, desktopStatus)
       },
     }),
@@ -55,6 +76,7 @@ function mountRoutes(host) {
       path: '/dsh-web-launcher/setup',
       handler: async (request, response) => {
         if (!methodOnly(request, response, 'POST')) return
+        if (!authorize(host, request, response)) return
         if (!sameOrigin(request)) {
           sendJson(response, 403, { ok: false, error: 'untrusted origin' })
           return
@@ -70,6 +92,7 @@ function mountRoutes(host) {
       path: '/dsh-web-launcher/remove',
       handler: async (request, response) => {
         if (!methodOnly(request, response, 'POST')) return
+        if (!authorize(host, request, response)) return
         if (!sameOrigin(request)) {
           sendJson(response, 403, { ok: false, error: 'untrusted origin' })
           return
@@ -89,7 +112,7 @@ export function apply(ctx, config) {
     })
   }
 
-  ctx.inject(['webServer'], (host) => {
+  ctx.inject(['webServer', 'connection'], (host) => {
     host.effect(() => {
       const disposers = mountRoutes(host)
       return () => {

@@ -4,6 +4,58 @@ import { request } from 'node:http'
 
 export const DEFAULT_URL = 'http://127.0.0.1:3080'
 export const DSH_MARKER = '__DSH_BOOT__'
+const AUTH_REQUIRED = 'dsh web authentication required; reopen the URL printed by dsh web.'
+
+export function launcherUrl(value = DEFAULT_URL) {
+  const url = new URL(value)
+  if (url.protocol !== 'http:' || url.hostname !== '127.0.0.1' || url.username || url.password
+    || url.pathname !== '/' || url.search || url.hash) throw new Error('启动器地址必须是 http://127.0.0.1:<端口>')
+  return url.origin
+}
+
+export function dshLaunchCommand(command, baseUrl) {
+  const url = new URL(launcherUrl(baseUrl))
+  // cmd.exe expands percent variables even inside quotes. Never interpolate
+  // a path containing shell expansion/control characters.
+  if (/["%\r\n!]/.test(command)) throw new Error('DSH 命令路径包含不支持的字符')
+  return `"${command}" web --no-open --host 127.0.0.1 --port ${url.port || '80'}`
+}
+
+export function dshUrlFromOutput(output, baseUrl) {
+  const expected = launcherUrl(baseUrl)
+  let found = null
+  for (const line of output.split(/\r?\n/).slice(0, -1)) {
+    const match = /^dsh web: (http:\/\/\S+)(?:\s|$)/.exec(line)
+    if (!match) continue
+    try {
+      const url = new URL(match[1])
+      if (url.origin === expected && url.pathname === '/' && !url.username && !url.password && !url.hash) found = url.href
+    } catch { /* ignore malformed announcements */ }
+  }
+  return found
+}
+
+// Only exchange a local launch token. Do not follow redirects or send cookies;
+// this proves the token still belongs to the running process before a restart.
+export function verifyLaunchUrl(value, timeoutMs = 1500) {
+  const url = new URL(value)
+  launcherUrl(url.origin)
+  if (!url.searchParams.has('token')) return Promise.resolve(false)
+  return new Promise(resolve => {
+    const timer = setTimeout(() => { req.destroy(); resolve(false) }, timeoutMs)
+    const req = request(url, res => {
+      clearTimeout(timer)
+      res.resume()
+      resolve(res.statusCode === 303 && res.headers.location === './' && Boolean(res.headers['set-cookie']?.length))
+    })
+    req.on('error', () => { clearTimeout(timer); resolve(false) })
+    req.end()
+  })
+}
+
+export function sendKeysText(value) {
+  return value.replace(/[+^%~(){}\[\]]/g, char => `{${char}}`)
+}
 
 /** Escape a value for a quoted VBScript string literal. */
 export function vbsString(value) {
@@ -23,13 +75,16 @@ export function makeHiddenRunner(nodePath, entryPath) {
 export function makeRefreshRunner() {
   return [
     'Option Explicit',
-    'If WScript.Arguments.Count <> 1 Then WScript.Quit 1',
+    'If WScript.Arguments.Count <> 2 Then WScript.Quit 1',
     'Dim shell',
     'Set shell = CreateObject("WScript.Shell")',
     'If shell.AppActivate(CLng(WScript.Arguments(0))) Then',
     '  WScript.Sleep 150',
     '  If Not shell.AppActivate(CLng(WScript.Arguments(0))) Then WScript.Quit 2',
-    '  shell.SendKeys "{F5}"',
+    '  shell.SendKeys "^l"',
+    '  WScript.Sleep 100',
+    '  shell.SendKeys WScript.Arguments(1)',
+    '  shell.SendKeys "{ENTER}"',
     '  WScript.Quit 0',
     'End If',
     'WScript.Quit 2',
@@ -76,10 +131,12 @@ export function browserPidFromTasklist(output) {
   return null
 }
 
-export function listeningPidFromNetstat(output) {
+export function listeningPidFromNetstat(output, baseUrl = DEFAULT_URL) {
+  const port = new URL(launcherUrl(baseUrl)).port || '80'
+  const addresses = new Set([`127.0.0.1:${port}`, `0.0.0.0:${port}`, `[::]:${port}`])
   for (const line of output.split(/\r?\n/)) {
     const columns = line.trim().split(/\s+/)
-    if (columns.length >= 5 && columns[1] === '127.0.0.1:3080' && columns[3] === 'LISTENING') {
+    if (columns.length >= 5 && addresses.has(columns[1]) && columns[3] === 'LISTENING') {
       const pid = Number.parseInt(columns[4], 10)
       return Number.isSafeInteger(pid) && pid > 0 ? pid : null
     }
@@ -101,7 +158,8 @@ export function endpointProbe(url = DEFAULT_URL, timeoutMs = 800) {
       let body = ''
       const statusCode = response.statusCode ?? null
       const classify = () => ({
-        kind: statusCode !== null && statusCode >= 200 && statusCode < 400 && body.includes(DSH_MARKER)
+        kind: ((statusCode === 200 && body.includes(DSH_MARKER))
+          || (statusCode === 401 && body.trim() === AUTH_REQUIRED))
           ? 'dsh'
           : 'other',
         statusCode,
