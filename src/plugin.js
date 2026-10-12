@@ -68,7 +68,7 @@ function mountRoutes(host) {
       handler: async (request, response) => {
         if (!methodOnly(request, response, 'GET')) return
         if (!authorize(host, request, response)) return
-        await handleAction(response, desktopStatus)
+        await handleAction(response, async () => ({ ...await desktopStatus(), instanceId: String(process.pid) }))
       },
     }),
     host.webServer.register({

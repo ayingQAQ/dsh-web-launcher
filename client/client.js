@@ -119,6 +119,31 @@ window.__ModuleLoader__.load({ id: 'dsh-web-launcher', factory: (require) => {
 
   exports.inject = ['slots', 'locale']
   exports.apply = (ctx) => {
+    // Browser-side recovery is independent of foreground windows and SendKeys.
+    // The durable DSH cookie survives a normal backend restart.
+    ctx.effect(() => {
+      let instanceId = null
+      let disposed = false
+      let pending = false
+      const poll = async () => {
+        if (pending || disposed) return
+        pending = true
+        try {
+          const status = await request('/dsh-web-launcher/status')
+          if (disposed || typeof status.instanceId !== 'string') return
+          if (instanceId !== null && instanceId !== status.instanceId) {
+            disposed = true
+            window.location.reload()
+            return
+          }
+          instanceId = status.instanceId
+        } catch { /* backend is restarting; retry when it is back */ }
+        finally { pending = false }
+      }
+      poll()
+      const timer = window.setInterval(poll, 2000)
+      return () => { disposed = true; window.clearInterval(timer) }
+    }, 'dsh-web-launcher: reload after backend restart')
     ctx.effect(() => ctx.locale.register(NS, { zh, en }), 'dsh-web-launcher: dictionaries')
     ctx.slots.inject('settings.general.item', () => ctx.slots.register({
       name: 'settings.general.item',

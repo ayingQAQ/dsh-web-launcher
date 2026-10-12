@@ -56,9 +56,9 @@ test('isolated Windows cold start, authenticated restart, pinned command and sta
   currentPid = second.pid
   assert.notEqual(second.launchUrl, first.launchUrl)
   const ui = (await readFile(uiLog, 'utf8')).trim().split('\n').map(JSON.parse)
-  assert.equal(ui.length, 2)
-  assert.equal(ui[1].action, 'refresh')
-  assert.equal(ui[1].args.at(-1), second.launchUrl)
+  // A restart must leave the existing tab URL untouched: no simulated keys
+  // and no second browser-open. The client watcher owns the actual reload.
+  assert.equal(ui.length, 1)
   // A matching PID alone must not authorize killing an authenticated process.
   await writeFile(statePath, JSON.stringify({ ...second, launchUrl: first.launchUrl }))
   const refused = await run()

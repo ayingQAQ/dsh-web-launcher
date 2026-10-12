@@ -80,25 +80,6 @@ export function makeHiddenRunner(nodePath, entryPath) {
   ].join('\r\n') + '\r\n'
 }
 
-export function makeRefreshRunner() {
-  return [
-    'Option Explicit',
-    'If WScript.Arguments.Count <> 2 Then WScript.Quit 1',
-    'Dim shell',
-    'Set shell = CreateObject("WScript.Shell")',
-    'If shell.AppActivate(CLng(WScript.Arguments(0))) Then',
-    '  WScript.Sleep 150',
-    '  If Not shell.AppActivate(CLng(WScript.Arguments(0))) Then WScript.Quit 2',
-    '  shell.SendKeys "^l"',
-    '  WScript.Sleep 100',
-    '  shell.SendKeys WScript.Arguments(1)',
-    '  shell.SendKeys "{ENTER}"',
-    '  WScript.Quit 0',
-    'End If',
-    'WScript.Quit 2',
-  ].join('\r\n') + '\r\n'
-}
-
 export function makeErrorRunner() {
   return [
     'Option Explicit',

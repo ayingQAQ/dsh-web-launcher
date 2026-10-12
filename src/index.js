@@ -17,8 +17,6 @@ import {
   listeningPidFromNetstat,
   makeErrorRunner,
   makeHiddenRunner,
-  makeRefreshRunner,
-  sendKeysText,
   verifyLaunchUrl,
   waitForDsh,
   writeText,
@@ -148,16 +146,6 @@ function browserWindowPid() {
   return null
 }
 
-function refreshExistingDshTab(url) {
-  const pid = browserWindowPid()
-  if (pid === null || !existsSync(refreshRunnerPath)) return false
-  const result = spawnSync('wscript.exe', ['//B', '//Nologo', refreshRunnerPath, String(pid), sendKeysText(url)], {
-    windowsHide: true,
-    stdio: 'ignore',
-  })
-  return result.status === 0
-}
-
 function listeningPid(url) {
   const result = spawnSync('netstat.exe', ['-ano', '-p', 'tcp'], {
     encoding: 'utf8',
@@ -170,7 +158,7 @@ function listeningPid(url) {
 
 async function writeHelperScripts() {
   await Promise.all([
-    writeText(refreshRunnerPath, makeRefreshRunner()),
+    rm(refreshRunnerPath, { force: true }),
     writeText(errorRunnerPath, makeErrorRunner()),
   ])
 }
@@ -273,7 +261,9 @@ export async function start() {
         const pid = listeningPid(url)
         if (pid === null) throw new Error('DSH 已启动，但无法记录进程。为安全起见未自动打开页面。')
         await writeText(statePath, JSON.stringify({ pid, command: dsh, baseUrl: url, launchUrl, cwd, dshHome }))
-        if (restarting && refreshExistingDshTab(launchUrl)) return
+        // The page watcher reloads its own current URL when instanceId changes.
+        // Never type into the browser or navigate an existing DSH window.
+        if (restarting && browserWindowPid() !== null) return
         await openBrowser(launchUrl)
         return
       }
