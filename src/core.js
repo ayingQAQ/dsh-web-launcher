@@ -4,6 +4,14 @@ import { request } from 'node:http'
 
 export const DEFAULT_URL = 'http://127.0.0.1:3080'
 export const DSH_MARKER = '__DSH_BOOT__'
+
+export function browserExecutableFromRegistry(output) {
+  const value = /REG_(?:EXPAND_)?SZ\s+(.+)/.exec(output)?.[1]?.trim()
+  if (!value) return null
+  const executable = /^"([^"]+\.exe)"(?:\s|$)/i.exec(value)?.[1]
+    ?? /^([^\s]+\.exe)(?:\s|$)/i.exec(value)?.[1]
+  return executable || null
+}
 const AUTH_REQUIRED = 'dsh web authentication required; reopen the URL printed by dsh web.'
 
 export function launcherUrl(value = DEFAULT_URL) {

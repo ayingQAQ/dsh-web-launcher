@@ -4,6 +4,12 @@ import { createServer } from 'node:http'
 import * as core from '../src/core.js'
 import { apply } from '../src/plugin.js'
 
+test('default browser registry command yields the executable without shell expansion', () => {
+  assert.equal(core.browserExecutableFromRegistry('    (Default) REG_SZ "C:\\Program Files (x86)\\Microsoft\\Edge\\Application\\msedge.exe" --single-argument %1'), 'C:\\Program Files (x86)\\Microsoft\\Edge\\Application\\msedge.exe')
+  assert.equal(core.browserExecutableFromRegistry('    (Default) REG_SZ C:\\browser\\firefox.exe -url "%1"'), 'C:\\browser\\firefox.exe')
+  assert.equal(core.browserExecutableFromRegistry('missing value'), null)
+})
+
 async function serve(t, handler) {
   const server = createServer(handler)
   await new Promise(resolve => server.listen(0, '127.0.0.1', resolve))

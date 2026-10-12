@@ -9,6 +9,7 @@ import {
   DEFAULT_URL,
   acquireStartupLock,
   browserPidFromTasklist,
+  browserExecutableFromRegistry,
   dshLaunchCommand,
   dshUrlFromOutput,
   endpointProbe,
@@ -61,11 +62,21 @@ function showError(title, message) {
   } catch { /* stderr below remains the final fallback */ }
 }
 
-function openBrowser(url = DEFAULT_URL) {
-  const child = spawn('explorer.exe', [url], {
-    detached: true,
-    stdio: 'ignore',
-    windowsHide: true,
+async function openBrowser(url = DEFAULT_URL) {
+  const choice = spawnSync('reg.exe', ['query', 'HKCU\\Software\\Microsoft\\Windows\\Shell\\Associations\\UrlAssociations\\http\\UserChoice', '/v', 'ProgId'], { encoding: 'utf8', windowsHide: true, timeout: 3000 })
+  const progId = /ProgId\s+REG_SZ\s+([^\r\n]+)/.exec(choice.stdout || '')?.[1]?.trim()
+  let executable = null
+  if (progId && /^[\w.-]+$/.test(progId)) {
+    const command = spawnSync('reg.exe', ['query', `HKCR\\${progId}\\shell\\open\\command`, '/ve'], { encoding: 'utf8', windowsHide: true, timeout: 3000 })
+    executable = browserExecutableFromRegistry(command.stdout || '')
+    if (executable && !existsSync(executable)) executable = null
+  }
+  const child = executable
+    ? spawn(executable, [url], { detached: true, stdio: 'ignore', windowsHide: false })
+    : spawn('rundll32.exe', ['url.dll,FileProtocolHandler', url], { detached: true, stdio: 'ignore', windowsHide: true })
+  await new Promise((resolve, reject) => {
+    child.once('error', reject)
+    child.once('spawn', resolve)
   })
   child.unref()
 }
@@ -263,7 +274,7 @@ export async function start() {
         if (pid === null) throw new Error('DSH 已启动，但无法记录进程。为安全起见未自动打开页面。')
         await writeText(statePath, JSON.stringify({ pid, command: dsh, baseUrl: url, launchUrl, cwd, dshHome }))
         if (restarting && refreshExistingDshTab(launchUrl)) return
-        openBrowser(launchUrl)
+        await openBrowser(launchUrl)
         return
       }
       await new Promise(resolve => setTimeout(resolve, 400))

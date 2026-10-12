@@ -6,9 +6,11 @@ import { EventEmitter } from 'node:events'
 const spawn = childProcess.spawn
 const spawnSync = childProcess.spawnSync
 childProcess.spawn = (command, args, options) => {
-  if (command !== 'explorer.exe') return spawn(command, args, options)
-  appendFileSync(process.env.TEST_UI_LOG, JSON.stringify({ action: 'open', args }) + '\n')
-  return Object.assign(new EventEmitter(), { unref() {} })
+  if (!Array.isArray(args) || !args.some(arg => /^http:\/\/127\.0\.0\.1/.test(arg))) return spawn(command, args, options)
+  appendFileSync(process.env.TEST_UI_LOG, JSON.stringify({ action: 'open', args: [args.at(-1)] }) + '\n')
+  const child = Object.assign(new EventEmitter(), { unref() {} })
+  setImmediate(() => child.emit('spawn'))
+  return child
 }
 childProcess.spawnSync = (command, args, options) => {
   if (command === 'tasklist.exe') return { status: 0, stdout: '"msedge.exe","123","Console","1","0 K","Running","test","0:00:00","DeepSeek Harness"' }
